@@ -8,11 +8,17 @@ import { NATS_DEFAULT_URL } from '@nestjs/microservices/constants';
   imports: [
     ClientsModule.register([
       {
-        name: 'APP_MESSAGE_BUS',
+        name: 'NATS_MESSAGE_BUS',
         transport: Transport.NATS,
         options: {
           url: NATS_DEFAULT_URL,
         },
+      },
+    ]),
+    ClientsModule.register([
+      {
+        name: 'TCP_MESSAGE_BUS',
+        transport: Transport.TCP,
       },
     ]),
   ],

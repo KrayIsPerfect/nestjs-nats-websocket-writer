@@ -1,11 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import {Inject, Injectable} from '@nestjs/common';
 import * as fs from 'fs';
-import { DataTypeEnum } from './utils/data.type.enum';
-import { IData } from './utils/data.interface';
+import {DataTypeEnum} from './utils/data.type.enum';
+import {IData} from './utils/data.interface';
+import {ClientProxy, Transport} from "@nestjs/microservices";
+import {IResponse} from "./utils/response.interface";
 
 @Injectable()
 export class AppService {
-  async handleData(data: IData): Promise<any> {
+  private counterNats = 0;
+  private counterTcp = 0;
+
+  constructor(
+      @Inject('NATS_MESSAGE_BUS')
+      private readonly clientNats: ClientProxy,
+      @Inject('TCP_MESSAGE_BUS')
+      private readonly clientTcp: ClientProxy,
+  ) {}
+
+  async handleData(data: IData, transport: Transport): Promise<IResponse> {
+    let res = null;
     console.log('Handling data...');
     const processData = async (exdata: IData) => {
       return new Promise((resolve) => {
@@ -16,15 +29,21 @@ export class AppService {
     };
     const processedData = (await processData(data)) as IData;
     if (data.type === DataTypeEnum.FILE) {
-      return await this.handleDataFile(processedData);
+      res = await this.handleDataFile(processedData);
     } else if (data.type === DataTypeEnum.DATA) {
-      return await this.handleDataObject(processedData);
+      res = await this.handleDataObject(processedData);
     } else {
-      return { success: true, type: data.type, err: 'Unknown datatype' };
+      res = { success: true, type: data.type, err: 'Unknown datatype' };
     }
+    if (transport === Transport.TCP) {
+      this.counterNats++
+    } else if (transport === Transport.NATS) {
+      this.counterTcp++
+    }
+    return res;
   }
 
-  private async handleDataFile(data: IData) {
+  private async handleDataFile(data: IData): Promise<IResponse> {
     try {
       if (data.data) {
         console.log('Saving file...');
@@ -65,7 +84,7 @@ export class AppService {
     }
   }
 
-  private async handleDataObject(data: IData) {
+  private async handleDataObject(data: IData): Promise<IResponse> {
     try {
       console.log('Handling object...');
       console.log(data);
@@ -81,6 +100,26 @@ export class AppService {
         success: false,
         err: err.message,
       };
+    }
+  }
+
+  checkCounter(counter: number, transport: Transport): void {
+    console.log('counter', counter, transport);
+    console.log('this', this.counterTcp, this.counterNats);
+    if (transport === Transport.NATS) {
+      const queueNats = this.counterNats - counter;
+      if (queueNats < 10) {
+        this.clientNats.emit('reader.send.data.on.off.nats', true);
+      } else if (queueNats > 50) {
+        this.clientNats.emit('reader.send.data.on.off.nats', false);
+      }
+    } else if (transport === Transport.TCP) {
+      const queueTcp = this.counterTcp - counter;
+      if (queueTcp < 10) {
+        this.clientTcp.emit({ cmd: 'reader.send.data.on.off.tcp' }, true);
+      } else if (queueTcp > 50) {
+        this.clientTcp.emit({ cmd: 'reader.send.data.on.off.tcp' }, false);
+      }
     }
   }
 }
