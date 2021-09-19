@@ -8,7 +8,6 @@ export class AppService {
       try {
         if (data.dataChunk) {
           console.log('Saving file...');
-          console.log(data);
           if (data.part === 1) {
             fs.writeFileSync(data.name, Buffer.from(data.dataChunk.data));
           } else {
