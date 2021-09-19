@@ -8,13 +8,13 @@ export class AppController {
 
   @MessagePattern('writer.handle.data.nats', Transport.NATS)
   handleDataNATS(data: any): any {
-    console.log('received "writer.handle.data"');
+    console.log('received "writer.handle.data.nats"');
     return this.appService.handleData(data);
   }
 
   @MessagePattern({ cmd: 'writer.handle.data.tcp' }, Transport.TCP)
   handleDataTCP(data: any): any {
-    console.log('received "writer.handle.data"');
+    console.log('received "writer.handle.data.tcp"');
     return this.appService.handleData(data);
   }
 }

@@ -7,10 +7,18 @@ import { IData } from './utils/data.interface';
 export class AppService {
   async handleData(data: IData): Promise<any> {
     console.log('Handling data...');
+    const processData = async (exdata: IData) => {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve(exdata);
+        }, 500);
+      });
+    };
+    const processedData = (await processData(data)) as IData;
     if (data.type === DataTypeEnum.FILE) {
-      return await this.handleDataFile(data);
+      return await this.handleDataFile(processedData);
     } else if (data.type === DataTypeEnum.DATA) {
-      return await this.handleDataObject(data);
+      return await this.handleDataObject(processedData);
     } else {
       return { success: true, type: data.type, err: 'Unknown datatype' };
     }
